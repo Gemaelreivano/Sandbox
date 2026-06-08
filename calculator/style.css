@@ -25,6 +25,7 @@ body{
   border-radius:12px;
   box-shadow:0 8px 30px rgba(32,45,60,0.12);
   padding:18px;
+  transition: transform 0.1s ease; /* Transisi tambahan untuk efek guncang */
 }
 
 .display{
@@ -58,9 +59,23 @@ body{
   cursor:pointer;
   color:var(--dark);
   box-shadow:inset 0 -2px 0 rgba(0,0,0,0.02);
+  /* --- Update Animasi & Efek Baru --- */
+  position: relative;
+  overflow: hidden; /* Mengunci animasi riak air tetap di dalam tombol */
+  transition: transform 0.1s ease, background-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.btn:active{transform:translateY(1px)}
+/* Berikan efek hover agar terasa interaktif */
+.btn:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  filter: brightness(0.95);
+}
+
+/* Efek active bawaan dibuat lebih membal */
+.btn:active{
+  transform: scale(0.92);
+}
+
 .btn.operator{background:var(--accent); color:#fff; font-weight:600}
 .btn.function{background:#eaf0f7; color:var(--muted)}
 .btn.equals{
@@ -75,6 +90,50 @@ body{
   text-align:left;
   padding-left:18px;
 }
+
+/* Elemen riak air (ripple) yang akan dibuat via JavaScript */
+.btn .ripple {
+  position: absolute;
+  border-radius: 50%;
+  transform: scale(0);
+  animation: ripple-animation 0.5s linear;
+  background-color: rgba(255, 255, 255, 0.4);
+  pointer-events: none;
+}
+
+/* Khusus tombol biasa yang terang, riak airnya berwarna biru lembut */
+.btn:not(.operator):not(.equals) .ripple {
+  background-color: rgba(74, 144, 226, 0.3);
+}
+
+@keyframes ripple-animation {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+/* Animasi Guncangan (Shake) untuk Error */
+.shake {
+  animation: shake-animation 0.4s ease-in-out;
+}
+
+@keyframes shake-animation {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+/* Animasi untuk angka baru yang muncul di layar display */
+.pop-display {
+  animation: pop-animation 0.15s ease-out;
+}
+
+@keyframes pop-animation {
+  0% { transform: scale(0.95); opacity: 0.7; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
 @media (max-width:360px){
   .calculator{width:100%}
   .display{font-size:24px;height:64px}
