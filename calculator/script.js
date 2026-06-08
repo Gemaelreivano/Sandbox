@@ -7,6 +7,7 @@
   let justEvaluated = false;
 
   function updateDisplay() {
+    if (!displayEl) return;
     displayEl.textContent = value;
   }
 
@@ -18,18 +19,29 @@
       justEvaluated = false;
     }
     if (n === '.' && value.includes('.')) return;
+    // allow building negative numbers when value is '-'
     if (value === '0' && n !== '.') value = n;
+    else if (value === '-' && n !== '.') value = value + n;
     else value = value + n;
     lastWasOperator = false;
     updateDisplay();
   }
 
   function inputOperator(op) {
+    // allow starting negative number when no expression yet and user presses '-'
+    if (expression === '' && value === '0' && op === '-') {
+      value = '-';
+      lastWasOperator = false;
+      updateDisplay();
+      return;
+    }
+
     if (lastWasOperator) {
       // replace the last operator
       expression = expression.slice(0, -1) + op;
     } else {
       expression += value + op;
+      // keep the displayed value until user starts typing next number
       value = '0';
     }
     lastWasOperator = true;
@@ -50,6 +62,23 @@
       // clear the result
       value = '0';
       justEvaluated = false;
+      updateDisplay();
+      return;
+    }
+
+    if (lastWasOperator) {
+      // remove trailing operator and try to restore previous operand
+      if (expression.length > 0) {
+        expression = expression.slice(0, -1);
+        // Extract last operand from expression
+        // Note: this is a simple approach and may not handle all negative-number edge cases
+        const parts = expression.split(/[\+\-\*\/]/).filter(Boolean);
+        const last = parts.length ? parts[parts.length - 1] : '0';
+        value = last;
+      } else {
+        value = '0';
+      }
+      lastWasOperator = false;
     } else {
       if (value.length <= 1) value = '0';
       else value = value.slice(0, -1);
@@ -76,8 +105,14 @@
     try {
       // Use Function constructor instead of eval for slightly safer evaluation
       // This is still only for a local calculator UI and not for untrusted input execution in production.
-      const result = Function('"use strict"; return (' + safeExpr + ')')();
-      value = String(Number.isFinite(result) ? result : 'Error');
+      const raw = Function('"use strict"; return (' + safeExpr + ')')();
+      if (!Number.isFinite(raw) || isNaN(raw)) {
+        value = 'Error';
+      } else {
+        // round to reasonable precision (12 decimal places)
+        const rounded = Math.round((raw + Number.EPSILON) * 1e12) / 1e12;
+        value = String(rounded);
+      }
       expression = '';
       justEvaluated = true;
       lastWasOperator = false;
