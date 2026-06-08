@@ -1,4 +1,4 @@
-// Simple calculator logic
+// Simple calculator logic with effects
 (() => {
   const displayEl = document.getElementById('display');
   let value = '0';          // shown value / current entry
@@ -6,20 +6,31 @@
   let lastWasOperator = false;
   let justEvaluated = false;
 
+  // Fungsi updateDisplay diperbarui agar mendukung efek animasi angka & guncangan
   function updateDisplay() {
     if (!displayEl) return;
     displayEl.textContent = value;
+
+    // Picu animasi pop setiap kali angka berubah
+    displayEl.classList.remove('pop-display');
+    void displayEl.offsetWidth; // Trik memicu ulang animasi CSS (reflow)
+    displayEl.classList.add('pop-display');
+
+    // Jika hasilnya Error, jalankan efek guncangan (shake) pada kalkulator
+    if (value === 'Error') {
+      const calcContainer = document.querySelector('.calculator');
+      calcContainer.classList.add('shake');
+      setTimeout(() => calcContainer.classList.remove('shake'), 400);
+    }
   }
 
   function inputNumber(n) {
     if (justEvaluated) {
-      // start new expression after result if a number is pressed
       expression = '';
       value = '0';
       justEvaluated = false;
     }
     if (n === '.' && value.includes('.')) return;
-    // allow building negative numbers when value is '-'
     if (value === '0' && n !== '.') value = n;
     else if (value === '-' && n !== '.') value = value + n;
     else value = value + n;
@@ -28,7 +39,6 @@
   }
 
   function inputOperator(op) {
-    // allow starting negative number when no expression yet and user presses '-'
     if (expression === '' && value === '0' && op === '-') {
       value = '-';
       lastWasOperator = false;
@@ -37,11 +47,9 @@
     }
 
     if (lastWasOperator) {
-      // replace the last operator
       expression = expression.slice(0, -1) + op;
     } else {
       expression += value + op;
-      // keep the displayed value until user starts typing next number
       value = '0';
     }
     lastWasOperator = true;
@@ -59,7 +67,6 @@
 
   function backspace() {
     if (justEvaluated) {
-      // clear the result
       value = '0';
       justEvaluated = false;
       updateDisplay();
@@ -67,11 +74,8 @@
     }
 
     if (lastWasOperator) {
-      // remove trailing operator and try to restore previous operand
       if (expression.length > 0) {
         expression = expression.slice(0, -1);
-        // Extract last operand from expression
-        // Note: this is a simple approach and may not handle all negative-number edge cases
         const parts = expression.split(/[\+\-\*\/]/).filter(Boolean);
         const last = parts.length ? parts[parts.length - 1] : '0';
         value = last;
@@ -87,7 +91,6 @@
   }
 
   function percent() {
-    // apply percent to current value
     const num = parseFloat(value);
     if (!isNaN(num)) {
       value = String(num / 100);
@@ -96,20 +99,15 @@
   }
 
   function evaluateExpression() {
-    // Build final expression
     const finalExpr = expression + value;
     if (!finalExpr) return;
-    // Replace × and ÷ if present (UI uses symbols but data-action uses * and / already)
     const safeExpr = finalExpr.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-');
 
     try {
-      // Use Function constructor instead of eval for slightly safer evaluation
-      // This is still only for a local calculator UI and not for untrusted input execution in production.
       const raw = Function('"use strict"; return (' + safeExpr + ')')();
       if (!Number.isFinite(raw) || isNaN(raw)) {
         value = 'Error';
       } else {
-        // round to reasonable precision (12 decimal places)
         const rounded = Math.round((raw + Number.EPSILON) * 1e12) / 1e12;
         value = String(rounded);
       }
@@ -125,9 +123,25 @@
     }
   }
 
-  // Click handling
+  // Click handling diperbarui untuk memicu Ripple Effect (Riak Air)
   document.querySelectorAll('.btn').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (e) => {
+      // --- LOGIKA RIPPLE EFFECT ---
+      const circle = document.createElement('span');
+      const diameter = Math.max(btn.clientWidth, btn.clientHeight);
+      const radius = diameter / 2;
+
+      const rect = btn.getBoundingClientRect();
+      circle.style.width = circle.style.height = `${diameter}px`;
+      circle.style.left = `${e.clientX - rect.left - radius}px`;
+      circle.style.top = `${e.clientY - rect.top - radius}px`;
+      circle.classList.add('ripple');
+
+      const ripple = btn.querySelector('.ripple');
+      if (ripple) ripple.remove();
+      btn.appendChild(circle);
+      // ----------------------------
+
       const n = btn.dataset.number;
       const action = btn.dataset.action;
 
@@ -141,7 +155,6 @@
         else if (action === '%') percent();
         else if (action === '=') evaluateExpression();
         else if (['+','-','*','/'].includes(action)) inputOperator(action);
-        else if (action === 'percent') percent();
       }
     });
   });
